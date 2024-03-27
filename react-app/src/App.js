@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
-import { getHistory } from './apis/ChatAPIs';
 import ChatMessage from './components/ChatMessage';
-import { CookiesProvider, useCookies } from 'react-cookie'
+import { useCookies } from 'react-cookie'
 import CreateCharacterModal from 'components/CreateCharacterModal';
 import { Button, TextField } from '@mui/material';
 import LobbyList from 'components/LobbyList';
@@ -24,11 +23,6 @@ function App() {
   const [ connected, setConnected ] = useState(false);
 
   useEffect(() => {
-    getHistory().then((response) => {
-      console.log(response);
-      setMessages(response.data.messages);
-    })
-
     const socket = new WebSocket("ws://" + window.location.host);
 
     socket.addEventListener('open', function (event) {

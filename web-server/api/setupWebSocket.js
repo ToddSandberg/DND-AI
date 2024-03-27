@@ -3,10 +3,14 @@ const WebSocket = require("ws");
 const axios = require('axios');
 const fs = require('fs');
 
+const characterName = "DND";
+const apiUrl = 'http://127.0.0.1:5000';
+
 const messages = [
     {
-        'role': 'DND',
-        'content': "And so, the adventure continues...",
+        'role': 'assistant',
+        'content': 'And so, the adventure continues...',
+        // TODO you need to manually change the first messages audio id
         'audioId': '1710822196'
     }
 ];
@@ -15,8 +19,9 @@ var characters = []
 
 var isDMLoading = false;
 
+// Run against localhost, but you could replace with any OpenAI API endpoint
 const instance = axios.create({
-    baseURL: 'http://127.0.0.1:5000',
+    baseURL: apiUrl,
     responseType: 'json'
 });
 
@@ -41,7 +46,6 @@ module.exports = function (server) {
                 console.log('Type is SEND_MESSAGE');
                 if (data.content.length > 0) {
                     // Add to existing messages
-                    console.log('Message length is good');
                     messages.push({
                         "role": "user",
                         "content": data.content
@@ -72,9 +76,10 @@ function generateGPTResponse(wss) {
     var context = "";
     const baseContext = fs.readFileSync('./context.txt', 'utf8');
     context += baseContext;
+    // Adds character descriptions to the context
     context += '\n {{user}} are the player characters. The player characters are ';
     context += characters.map((char) => char.name + ': ' + char.description.replace('.', ',')).join(', ') + "\n\n";
-    context += 'Describe all npc appearances that talk in a scene in detail. Do not include dialogue from ' + characters.map((char) => char.name).join(', ') + ', {{user}}, or the players in your responses.';
+    context += 'Do not include dialogue from ' + characters.map((char) => char.name).join(', ') + ', {{user}}, or the players in your responses. Do not include dialogue from User.';
 
     console.log(context);
     // Call your openai api
@@ -87,7 +92,7 @@ function generateGPTResponse(wss) {
         data: {
             "messages": messages,
             "mode": "chat",
-            "character": "DND",
+            "character": characterName,
             "context": context
         }
     })
@@ -106,7 +111,7 @@ function generateGPTResponse(wss) {
             if (files && files.length > 1) {
                 console.error('More than one pending file hmmmm');
                 messages.push({
-                    "role": "DND",
+                    "role": "assistant",
                     "content": messageText
                 });
                 setDMLoading(wss, false);
@@ -114,7 +119,7 @@ function generateGPTResponse(wss) {
             } else if (!files || files.length < 1) {
                 console.log('No audio file in pending, assuming thats intended');
                 messages.push({
-                    "role": "DND",
+                    "role": "assistant",
                     "content": messageText
                 });
                 setDMLoading(wss, false);
@@ -127,7 +132,7 @@ function generateGPTResponse(wss) {
                     if (err) console.error("Unable to move audio file!");
                     console.log('Successfully renamed - AKA moved! ' + audioId)
                     messages.push({
-                        "role": "DND",
+                        "role": "assistant",
                         "content": messageText,
                         "audioId": audioId
                     });

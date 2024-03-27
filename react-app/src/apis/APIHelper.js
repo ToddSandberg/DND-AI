@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// TODO fetch the current IP somehow
+// For any sequential api calls we may need
 const instance = axios.create({
     baseURL: window.location.href,
     responseType: 'json'

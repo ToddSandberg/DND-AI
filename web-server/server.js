@@ -18,11 +18,12 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, '..' , 'react-app' ,'build', 'index.html'));
 });
 
-var routes = require('./api/routes/apiRoutes'); //importing route
-routes(app); //register the route
+var routes = require('./api/routes/apiRoutes');
+routes(app);
 
 app.use(function(req, res) {
   res.status(404).send({url: req.originalUrl + ' not found'})
 });
 
+// Change the port you want to run on here
 server.listen(9000);
