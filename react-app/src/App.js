@@ -21,6 +21,7 @@ function App() {
   const [ oldName, setOldName ] = useState();
   const [ cookies, setCookie ] = useCookies(['user'])
   const [ connected, setConnected ] = useState(false);
+  const [ shouldRefreshChar, setShouldRefreshChar ] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://" + window.location.host);
@@ -39,6 +40,8 @@ function App() {
         setIsDMLoading(data.isDMLoading);
       } else if (data.type && data.type === 'CHARACTER_UPDATE') {
         setLoggedInCharacters(data.characters);
+      } else if (data.type && data.type === 'REFRESH_CHARACTERS') {
+        setShouldRefreshChar(true);
       }
     })
 
@@ -76,6 +79,18 @@ function App() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (shouldRefreshChar) {
+      console.log("Sending char back to server");
+      sendCharUpdate({
+        name: characterName,
+        description: characterDescription,
+        oldName: characterName
+      });
+      setShouldRefreshChar(false);
+    }
+  }, [characterDescription, characterName, sendCharUpdate, shouldRefreshChar])
 
   useEffect(() => {
     console.log("New char: " + characterName + " " + characterDescription);

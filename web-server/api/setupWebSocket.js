@@ -15,9 +15,10 @@ const messages = [
     }
 ];
 
-var characters = []
-
+var characters = [];
 var isDMLoading = false;
+
+const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
 
 // Run against localhost, but you could replace with any OpenAI API endpoint
 const instance = axios.create({
@@ -62,10 +63,12 @@ module.exports = function (server) {
 
     // handle close event
     ctx.on("close", () => {
-      console.log("closed", wss.clients.size);
+        // TODO if there is a way to get information on the client that disconnected that would be better
+        console.log("Client disconnected, requesting refresh of characters on server side.");
+        requestCharacterRefresh(wss);
     });
 
-    // sent a message that we're good to proceed
+    // Send all necessary info to client on connect
     ctx.send(JSON.stringify({ type: 'MESSAGE_UPDATE', messages }));
     ctx.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
     ctx.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
@@ -184,6 +187,15 @@ function setDMLoading(wss, isLoading) {
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
+        }
+    });
+}
+
+function requestCharacterRefresh(wss) {
+    characters = [];
+    wss.clients.forEach(function each(client) {
+        if (client !== wss && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: REFRESH_CHARACTERS }));
         }
     });
 }
