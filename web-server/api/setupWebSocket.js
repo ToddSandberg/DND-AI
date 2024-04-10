@@ -17,8 +17,11 @@ const messages = [
 
 var characters = [];
 var isDMLoading = false;
+var numVoted = 0;
 
 const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
+const TRIGGER_DM = 'TRIGGER_DM';
+const UPDATE_VOTES = 'UPDATE_VOTES';
 
 // Run against localhost, but you could replace with any OpenAI API endpoint
 const instance = axios.create({
@@ -53,9 +56,14 @@ module.exports = function (server) {
                     });
                 }
                 sendMessagesToClients(wss);
-        } else if(data.type && data.type == 'TRIGGER_DM') {
-            setDMLoading(wss, true);
-            generateGPTResponse(wss);
+        } else if(data.type && data.type == TRIGGER_DM) {
+            numVoted++;
+            sendVoteUpdate(wss);
+            if (numVoted >= characters.length) {
+                numVoted = 0;
+                setDMLoading(wss, true);
+                generateGPTResponse(wss);
+            }
         } else if(data.type && data.type == 'SET_CHARACTER') {
             pushCharacter(wss, data.character)
         }
@@ -72,6 +80,7 @@ module.exports = function (server) {
     ctx.send(JSON.stringify({ type: 'MESSAGE_UPDATE', messages }));
     ctx.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
     ctx.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
+    ctx.send(JSON.stringify({ type: UPDATE_VOTES, numVoted }));
   });
 }
 
@@ -119,6 +128,7 @@ function generateGPTResponse(wss) {
                 });
                 setDMLoading(wss, false);
                 sendMessagesToClients(wss);
+                sendVoteUpdate(wss);
             } else if (!files || files.length < 1) {
                 console.log('No audio file in pending, assuming thats intended');
                 messages.push({
@@ -127,6 +137,7 @@ function generateGPTResponse(wss) {
                 });
                 setDMLoading(wss, false);
                 sendMessagesToClients(wss);
+                sendVoteUpdate(wss);
             } else {
                 // TODO maybe its better to just save filename?
                 const file = files[0];
@@ -141,6 +152,7 @@ function generateGPTResponse(wss) {
                     });
                     setDMLoading(wss, false);
                     sendMessagesToClients(wss);
+                    sendVoteUpdate(wss);
                 })
             }
         })
@@ -196,6 +208,14 @@ function requestCharacterRefresh(wss) {
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: REFRESH_CHARACTERS }));
+        }
+    });
+}
+
+function sendVoteUpdate(wss) {
+    wss.clients.forEach(function each(client) {
+        if (client !== wss && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: UPDATE_VOTES, numVoted }));
         }
     });
 }

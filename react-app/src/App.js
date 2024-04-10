@@ -5,6 +5,7 @@ import { useCookies } from 'react-cookie'
 import CreateCharacterModal from 'components/CreateCharacterModal';
 import { Button, TextField } from '@mui/material';
 import LobbyList from 'components/LobbyList';
+import Badge from '@mui/material/Badge';
 
 function App() {
   const [ messages, setMessages ] = useState([]);
@@ -14,6 +15,7 @@ function App() {
   const [ triggerDM, setTriggerDM ] = useState(() => () => undefined);
   const [ sendMessage, setSendMessage ] = useState(() => () => undefined);
   const [ sendCharUpdate, setSendCharUpdate ] = useState(() => () => undefined);
+  const [ numVoted, setNumVoted ] = useState(0);
 
   // User specific data
   const [ characterName, setCharacterName ] = useState();
@@ -42,6 +44,8 @@ function App() {
         setLoggedInCharacters(data.characters);
       } else if (data.type && data.type === 'REFRESH_CHARACTERS') {
         setShouldRefreshChar(true);
+      } else if (data.type && data.type === 'UPDATE_VOTES') {
+        setNumVoted(data.numVoted);
       }
     })
 
@@ -173,13 +177,24 @@ function App() {
           >
             Submit
           </Button>
-          <Button
+          {numVoted > 0 ?
+          <Badge badgeContent={numVoted + "/" + loggedInCharacters.length} color="primary">
+            <Button
+              disabled={isDMLoading || !characterName}
+              onClick={() => triggerDM()}
+              variant="outlined"
+            >
+              Trigger DM
+            </Button>
+          </Badge>
+          : <Button
             disabled={isDMLoading || !characterName}
             onClick={() => triggerDM()}
             variant="outlined"
           >
             Trigger DM
           </Button>
+}
         </form>
       </header>
     </div>;
