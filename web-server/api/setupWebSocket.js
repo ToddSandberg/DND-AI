@@ -22,6 +22,7 @@ var numVoted = 0;
 const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
 const TRIGGER_DM = 'TRIGGER_DM';
 const UPDATE_VOTES = 'UPDATE_VOTES';
+const EDIT_MESSAGE = 'EDIT_MESSAGE';
 
 // Run against localhost, but you could replace with any OpenAI API endpoint
 const instance = axios.create({
@@ -52,7 +53,8 @@ module.exports = function (server) {
                     // Add to existing messages
                     messages.push({
                         "role": "user",
-                        "content": data.content
+                        "content": data.content,
+                        "character": data.character
                     });
                 }
                 sendMessagesToClients(wss);
@@ -66,6 +68,11 @@ module.exports = function (server) {
             }
         } else if(data.type && data.type == 'SET_CHARACTER') {
             pushCharacter(wss, data.character)
+        } else if(data.type && data.type == EDIT_MESSAGE) {
+            console.log(data);
+            // TODO make sure oldMessage is the current message value
+            messages[data.index].content = data.newMessage;
+            sendMessagesToClients(wss);
         }
     });
 

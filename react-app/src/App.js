@@ -15,6 +15,7 @@ function App() {
   const [ triggerDM, setTriggerDM ] = useState(() => () => undefined);
   const [ sendMessage, setSendMessage ] = useState(() => () => undefined);
   const [ sendCharUpdate, setSendCharUpdate ] = useState(() => () => undefined);
+  const [ sendMessageUpdate, setSendMessageUpdate ] = useState(() => () => undefined);
   const [ numVoted, setNumVoted ] = useState(0);
 
   // User specific data
@@ -51,10 +52,10 @@ function App() {
 
     // Make it so sending a message send over socket
     setSendMessage(() => {
-      return (role, content) => {
+      return (character, content) => {
         socket.send(JSON.stringify({
           type: "SEND_MESSAGE",
-          role,
+          character,
           content
         }));
       }
@@ -79,6 +80,15 @@ function App() {
             description: character.description,
             oldName: oldName
           }
+        }));
+      }
+    });
+
+    // Trigger message edit
+    setSendMessageUpdate(() => {
+      return (oldMessage, newMessage, index) => {
+        socket.send(JSON.stringify({
+          type: "EDIT_MESSAGE", newMessage, oldMessage, index
         }));
       }
     });
@@ -120,7 +130,6 @@ function App() {
   }, [cookies, sendCharUpdate])
 
   const handleCharacterChange = useCallback((name, desc) => {
-    console.log("Saving new char info: " + name +" " + desc);
     setCookie('user', { name, desc }, { path: '/' });
     setOldName(characterName);
     setCharacterName(name);
@@ -137,8 +146,10 @@ function App() {
         <LobbyList users={loggedInCharacters}/>
         {messages
           .filter((message) => message.content && message.content.length > 0)
-          .map((message) => <ChatMessage
+          .map((message, i) => <ChatMessage
             message={message}
+            user={characterName}
+            editMessage={(newMessage) => sendMessageUpdate(null, newMessage, i)}
           />)
         }
         {isDMLoading &&
@@ -147,6 +158,7 @@ function App() {
               role: 'DM',
               content: 'loading response...'
             }}
+            user={characterName}
           />
         }
         <form onSubmit={(e) => {
