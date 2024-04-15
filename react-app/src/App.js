@@ -149,7 +149,7 @@ function App() {
           .map((message, i) => <ChatMessage
             message={message}
             user={characterName}
-            editMessage={(newMessage) => sendMessageUpdate(null, newMessage, i)}
+            editMessage={(newMessage) => sendMessageUpdate(message.content, newMessage, i)}
           />)
         }
         {isDMLoading &&

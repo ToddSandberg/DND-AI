@@ -70,9 +70,11 @@ module.exports = function (server) {
             pushCharacter(wss, data.character)
         } else if(data.type && data.type == EDIT_MESSAGE) {
             console.log(data);
-            // TODO make sure oldMessage is the current message value
-            messages[data.index].content = data.newMessage;
-            sendMessagesToClients(wss);
+            // TODO send error on mismatch
+            if (messages[data.index].content === data.oldMessage) {
+                messages[data.index].content = data.newMessage;
+                sendMessagesToClients(wss);
+            }
         }
     });
 

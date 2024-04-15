@@ -1,5 +1,5 @@
 import { Edit } from '@mui/icons-material';
-import { CircularProgress, IconButton, TextareaAutosize } from '@mui/material';
+import { Button, CircularProgress, IconButton, TextareaAutosize } from '@mui/material';
 import React, { useState } from 'react';
 import { Message } from 'types/MessageTypes';
 
@@ -20,6 +20,27 @@ function getMessageContent(messageContent: string, isEditing: boolean, setCurren
   }
 }
 
+function getEditButton(isEditing: boolean, setIsEditing: (isEditing: boolean) => void, saveEdit: () => void) {
+  if (isEditing) {
+    return <Button
+      onClick={() => {
+        saveEdit();
+        setIsEditing(!isEditing)
+      }}
+      style={{top:'0', right:'0', position: 'relative'}}
+    >
+      Save
+    </Button>
+  } else {
+    return <IconButton
+        onClick={() => {
+          setIsEditing(!isEditing)
+        }}
+        style={{top:'0', right:'0', position: 'relative'}}
+      ><Edit/></IconButton>
+  }
+}
+
 export default function ChatMessage({ message, user, editMessage }: Props) {
   const [ isEditing, setIsEditing ] = useState(false);
   const [ currentMessage, setCurrentMessage ] = useState(message.content);
@@ -35,15 +56,7 @@ export default function ChatMessage({ message, user, editMessage }: Props) {
     textAlign: 'left'
   }}>
     {message.character && message.character === user &&
-      <IconButton
-        onClick={() => {
-          if(isEditing) {
-            editMessage(currentMessage);
-          }
-          setIsEditing(!isEditing)
-        }}
-        style={{top:'0', right:'0', position: 'relative'}}
-      ><Edit/></IconButton>
+      getEditButton(isEditing, setIsEditing, () => editMessage(currentMessage))
     }
     {message.audioId &&
       <audio controls src={`${window.location.href}audio.wav?id=${message.audioId}`} autoPlay={true}>
