@@ -6,6 +6,8 @@ import CreateCharacterModal from 'components/CreateCharacterModal';
 import { Button, TextField } from '@mui/material';
 import LobbyList from 'components/LobbyList';
 import Badge from '@mui/material/Badge';
+import { useErrorHook } from 'components/ErrorHook';
+import { ErrorPopUps } from 'components/ErrorPopUps';
 
 function App() {
   const [ messages, setMessages ] = useState([]);
@@ -17,6 +19,7 @@ function App() {
   const [ sendCharUpdate, setSendCharUpdate ] = useState(() => () => undefined);
   const [ sendMessageUpdate, setSendMessageUpdate ] = useState(() => () => undefined);
   const [ numVoted, setNumVoted ] = useState(0);
+  const { errors, pushError, cancelError } = useErrorHook([]);
 
   // User specific data
   const [ characterName, setCharacterName ] = useState();
@@ -47,6 +50,8 @@ function App() {
         setShouldRefreshChar(true);
       } else if (data.type && data.type === 'UPDATE_VOTES') {
         setNumVoted(data.numVoted);
+      } else if (data.type && data.type === 'ERROR') {
+        pushError(data.message);
       }
     })
 
@@ -137,6 +142,7 @@ function App() {
   }, [setCharacterName, setCharacterDescription, setCookie, characterName]);
 
   return <div className="App">
+      { errors && <ErrorPopUps errors={errors} cancelError={cancelError} /> }
       <CreateCharacterModal
         characterName={characterName}
         characterDescription={characterDescription}

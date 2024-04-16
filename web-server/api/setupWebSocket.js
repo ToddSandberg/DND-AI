@@ -23,6 +23,7 @@ const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
 const TRIGGER_DM = 'TRIGGER_DM';
 const UPDATE_VOTES = 'UPDATE_VOTES';
 const EDIT_MESSAGE = 'EDIT_MESSAGE';
+const ERROR = 'ERROR';
 
 // Run against localhost, but you could replace with any OpenAI API endpoint
 const instance = axios.create({
@@ -69,11 +70,11 @@ module.exports = function (server) {
         } else if(data.type && data.type == 'SET_CHARACTER') {
             pushCharacter(wss, data.character)
         } else if(data.type && data.type == EDIT_MESSAGE) {
-            console.log(data);
-            // TODO send error on mismatch
             if (messages[data.index].content === data.oldMessage) {
                 messages[data.index].content = data.newMessage;
                 sendMessagesToClients(wss);
+            } else {
+                ctx.send(JSON.stringify({ type: ERROR, message: 'Message value changed before edit could be made.' }));
             }
         }
     });

@@ -9,3 +9,10 @@ export type User = {
     name: string,
     description: string
 }
+
+export type UserError = {
+    id: string,
+    disabled: boolean,
+    message: string,
+    isSuccess: boolean
+}
