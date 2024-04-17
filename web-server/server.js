@@ -12,7 +12,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.use(express.static(path.join(__dirname, '..' , 'react-app' , 'build')));
+app.use(express.static(path.join(__dirname, '..' , 'react-app' , 'dist')));
 
 app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, '..' , 'react-app' ,'build', 'index.html'));

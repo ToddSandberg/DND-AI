@@ -1,5 +1,7 @@
 
 /web-server/audioFiles/*.wav
 /web-server/node_modules
-/react-app/build
+/react-app/dist
+/react-app/.cache
+/react-app/.parcel-cache
 /react-app/node_modules
