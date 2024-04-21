@@ -49,7 +49,7 @@ function App() {
       } else if (data.type && data.type === 'REFRESH_CHARACTERS') {
         setShouldRefreshChar(true);
       } else if (data.type && data.type === 'UPDATE_VOTES') {
-        setNumVoted(data.numVoted);
+        setNumVoted(data.votes.length);
       } else if (data.type && data.type === 'ERROR') {
         pushError(data.message);
       }
@@ -70,7 +70,8 @@ function App() {
     setTriggerDM(() => {
       return () => {
         socket.send(JSON.stringify({
-          type: "TRIGGER_DM"
+          type: "TRIGGER_DM",
+          name: characterName
         }));
       }
     });
@@ -83,7 +84,7 @@ function App() {
           character: {
             name: character.name,
             description: character.description,
-            oldName: oldName
+            oldName
           }
         }));
       }
@@ -104,42 +105,39 @@ function App() {
       console.log("Sending char back to server");
       sendCharUpdate({
         name: characterName,
-        description: characterDescription,
-        oldName: characterName
-      });
+        description: characterDescription
+      }, oldName);
       setShouldRefreshChar(false);
     }
-  }, [characterDescription, characterName, sendCharUpdate, shouldRefreshChar])
+  }, [characterDescription, characterName, oldName, sendCharUpdate, shouldRefreshChar])
 
   useEffect(() => {
-    console.log("New char: " + characterName + " " + characterDescription);
     if (connected){
-      console.log("Connected is true");
       sendCharUpdate({
         name: characterName,
-        description: characterDescription,
-        oldName
-      });
+        description: characterDescription
+      }, oldName);
     }
   }, [connected, characterName, characterDescription, sendCharUpdate, oldName]);
 
   useEffect(() => {
     if (cookies.user) {
       if (cookies.user.name) {
+        setOldName(cookies.user.name)
         setCharacterName(cookies.user.name)
       }
       if (cookies.user.desc) {
         setCharacterDescription(cookies.user.desc)
       }
     }
-  }, [cookies, sendCharUpdate])
+  }, [cookies])
 
   const handleCharacterChange = useCallback((name, desc) => {
     setCookie('user', { name, desc }, { path: '/' });
     setOldName(characterName);
     setCharacterName(name);
     setCharacterDescription(desc);
-  }, [setCharacterName, setCharacterDescription, setCookie, characterName]);
+  }, [setCharacterName, setOldName, setCharacterDescription, setCookie, characterName]);
 
   return <div className="App">
       { errors && <ErrorPopUps errors={errors} cancelError={cancelError} /> }

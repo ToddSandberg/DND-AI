@@ -17,7 +17,8 @@ const messages = [
 
 var characters = [];
 var isDMLoading = false;
-var numVoted = 0;
+var triggerDMVotes = [];
+var pendingTriggerDMVotes = [];
 
 const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
 const TRIGGER_DM = 'TRIGGER_DM';
@@ -60,10 +61,13 @@ module.exports = function (server) {
                 }
                 sendMessagesToClients(wss);
         } else if(data.type && data.type == TRIGGER_DM) {
-            numVoted++;
+            // TODO check if votes already contains character
+            triggerDMVotes.push(data.name);
+            pendingTriggerDMVotes.push(data.name);
             sendVoteUpdate(wss);
-            if (numVoted >= characters.length) {
-                numVoted = 0;
+            if (triggerDMVotes.length >= characters.length) {
+                triggerDMVotes = [];
+                pendingTriggerDMVotes = [];
                 setDMLoading(wss, true);
                 generateGPTResponse(wss);
             }
@@ -90,7 +94,7 @@ module.exports = function (server) {
     ctx.send(JSON.stringify({ type: 'MESSAGE_UPDATE', messages }));
     ctx.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
     ctx.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
-    ctx.send(JSON.stringify({ type: UPDATE_VOTES, numVoted }));
+    ctx.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
   });
 }
 
@@ -171,6 +175,30 @@ function generateGPTResponse(wss) {
 }
 
 function pushCharacter(wss, character) {
+    // Handle updating votes on character update
+    if (character.oldName && character.name && character.oldName !== character.name) {
+        const inPending = pendingTriggerDMVotes.includes(character.oldName);
+        const inVotes = triggerDMVotes.includes(character.oldName);
+
+        // if old name check if old name is in pending but not in votes
+        if (inPending && !inVotes) {
+            triggerDMVotes.push(character.name);
+            pendingTriggerDMVotes = pendingTriggerDMVotes.filter(name => name !== character.oldName);
+            pendingTriggerDMVotes.push(character.name);
+        } else if (inPending && inVotes) {
+            triggerDMVotes = triggerDMVotes.filter(name => name !== character.name);
+            triggerDMVotes.push(character.name);
+            pendingTriggerDMVotes = pendingTriggerDMVotes.filter(name => name !== character.oldName);
+            pendingTriggerDMVotes.push(character.name);
+        }
+        // if oldName does not match, update name
+    } else if ((!character.oldName && character.name) || (character.oldName === character.name)) {
+        // If only new name, check if new name is in pending
+        if (pendingTriggerDMVotes.includes(character.name) && !triggerDMVotes.includes(character.name)) {
+            triggerDMVotes.push(character.name);
+        }
+    }
+
     if (character.oldName) {
         // If updating from old name, remove old character
         characters = characters.filter(char => char.name !== character.oldName);
@@ -190,6 +218,7 @@ function pushCharacter(wss, character) {
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
+            client.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
         }
     });
 }
@@ -215,6 +244,7 @@ function setDMLoading(wss, isLoading) {
 
 function requestCharacterRefresh(wss) {
     characters = [];
+    triggerDMVotes = [];
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: REFRESH_CHARACTERS }));
@@ -225,7 +255,7 @@ function requestCharacterRefresh(wss) {
 function sendVoteUpdate(wss) {
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: UPDATE_VOTES, numVoted }));
+            client.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
         }
     });
 }
