@@ -167,17 +167,20 @@ function App() {
         }
         <form onSubmit={(e) => {
             e.preventDefault();
-            const pendingMessages = [
-              ...messages,
-              {
-                role: 'user',
-                content: characterName + ": " + currentMessage
-              }
-            ];
-            setMessages(pendingMessages);
-            setCurrentMessage('');
-            sendMessage(characterName, characterName + ": " +currentMessage);
-            //submit(currentMessage).then(response => setMessages(response.data.messages));
+            if (currentMessage == null || currentMessage.length <= 0) {
+              pushError('Cannot send empty message');
+            } else {
+              const pendingMessages = [
+                ...messages,
+                {
+                  role: 'user',
+                  content: characterName + ": " + currentMessage
+                }
+              ];
+              setMessages(pendingMessages);
+              setCurrentMessage('');
+              sendMessage(characterName, characterName + ": " +currentMessage);
+            }
         }}>
           <TextField
             variant="filled"
