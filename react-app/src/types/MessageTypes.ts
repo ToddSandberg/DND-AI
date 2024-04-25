@@ -6,8 +6,8 @@ export type Message = {
 }
 
 export type User = {
-    name: string,
-    description: string
+    name: string|undefined,
+    description: string|undefined
 }
 
 export type UserError = {

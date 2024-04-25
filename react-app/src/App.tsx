@@ -8,23 +8,24 @@ import LobbyList from 'components/LobbyList';
 import Badge from '@mui/material/Badge';
 import { useErrorHook } from 'components/ErrorHook';
 import { ErrorPopUps } from 'components/ErrorPopUps';
+import { Message, User } from 'types/MessageTypes';
 
 function App() {
-  const [ messages, setMessages ] = useState([]);
+  const [ messages, setMessages ] = useState<Message[]>([]);
   const [ currentMessage, setCurrentMessage ] = useState('');
   const [ isDMLoading, setIsDMLoading ] = useState(false);
   const [ loggedInCharacters, setLoggedInCharacters ] = useState([]);
-  const [ triggerDM, setTriggerDM ] = useState(() => () => undefined);
-  const [ sendMessage, setSendMessage ] = useState(() => () => undefined);
-  const [ sendCharUpdate, setSendCharUpdate ] = useState(() => () => undefined);
-  const [ sendMessageUpdate, setSendMessageUpdate ] = useState(() => () => undefined);
+  const [ triggerDM, setTriggerDM ] = useState(() => () => {});
+  const [ sendMessage, setSendMessage ] = useState(() => (character:string, content:string) => {});
+  const [ sendCharUpdate, setSendCharUpdate ] = useState(() => (character:User, oldName:string|undefined) => {});
+  const [ sendMessageUpdate, setSendMessageUpdate ] = useState(() => (oldMessage:string, newMessage:string, index:number) => {});
   const [ numVoted, setNumVoted ] = useState(0);
   const { errors, pushError, cancelError } = useErrorHook([]);
 
   // User specific data
-  const [ characterName, setCharacterName ] = useState();
-  const [ characterDescription, setCharacterDescription ] = useState();
-  const [ oldName, setOldName ] = useState();
+  const [ characterName, setCharacterName ] = useState<string|undefined>();
+  const [ characterDescription, setCharacterDescription ] = useState<string|undefined>();
+  const [ oldName, setOldName ] = useState<string|undefined>();
   const [ cookies, setCookie ] = useCookies(['user'])
   const [ connected, setConnected ] = useState(false);
   const [ shouldRefreshChar, setShouldRefreshChar ] = useState(false);
@@ -57,7 +58,7 @@ function App() {
 
     // Make it so sending a message send over socket
     setSendMessage(() => {
-      return (character, content) => {
+      return (character:string, content:string) => {
         socket.send(JSON.stringify({
           type: "SEND_MESSAGE",
           character,
@@ -78,7 +79,7 @@ function App() {
 
     // Trigger character update
     setSendCharUpdate(() => {
-      return (character, oldName) => {
+      return (character:User, oldName:string) => {
         socket.send(JSON.stringify({
           type: "SET_CHARACTER",
           character: {
@@ -92,7 +93,7 @@ function App() {
 
     // Trigger message edit
     setSendMessageUpdate(() => {
-      return (oldMessage, newMessage, index) => {
+      return (oldMessage:string, newMessage:string, index:number) => {
         socket.send(JSON.stringify({
           type: "EDIT_MESSAGE", newMessage, oldMessage, index
         }));
@@ -132,7 +133,7 @@ function App() {
     }
   }, [cookies])
 
-  const handleCharacterChange = useCallback((name, desc) => {
+  const handleCharacterChange = useCallback((name:string|undefined, desc:string|undefined) => {
     setCookie('user', { name, desc }, { path: '/' });
     setOldName(characterName);
     setCharacterName(name);
@@ -149,8 +150,8 @@ function App() {
       <header className="App-header">
         <LobbyList users={loggedInCharacters}/>
         {messages
-          .filter((message) => message.content && message.content.length > 0)
-          .map((message, i) => <ChatMessage
+          .filter((message:Message) => message.content && message.content.length > 0)
+          .map((message:Message, i:number) => <ChatMessage
             message={message}
             user={characterName}
             editMessage={(newMessage) => sendMessageUpdate(message.content, newMessage, i)}
@@ -169,6 +170,8 @@ function App() {
             e.preventDefault();
             if (currentMessage == null || currentMessage.length <= 0) {
               pushError('Cannot send empty message');
+            } else if(!characterName) {
+              pushError('No character name');
             } else {
               const pendingMessages = [
                 ...messages,
@@ -183,8 +186,8 @@ function App() {
             }
         }}>
           <TextField
-            variant="filled"
-            style={{backgroundColor: 'white'}}
+            multiline
+            style={{backgroundColor: 'white', width: '400px', borderRadius: '10px', marginRight: '20px'}}
             value={currentMessage}
             disabled={!characterName}
             onChange={(e) => setCurrentMessage(e.target.value)}

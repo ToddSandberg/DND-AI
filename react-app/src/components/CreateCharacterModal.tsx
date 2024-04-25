@@ -3,9 +3,9 @@ import { Box, Button, Modal, TextField, Typography } from '@mui/material';
 import { modalStyle } from 'constants/styleConstants';
 
 type Props = {
-    characterName: string,
-    characterDescription: string,
-    handleCharacterChange: (name: string, description: string) => void
+    characterName: string|undefined,
+    characterDescription: string|undefined,
+    handleCharacterChange: (name: string|undefined, description: string|undefined) => void
 }
 
 export default function CreateCharacterModal({

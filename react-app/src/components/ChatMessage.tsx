@@ -5,8 +5,8 @@ import { Message } from 'types/MessageTypes';
 
 type Props = {
   message: Message,
-  user: string,
-  editMessage: (newMessage: string) => void
+  user: string|undefined,
+  editMessage?: (newMessage: string) => void
 }
 
 function getMessageContent(messageContent: string, isEditing: boolean, setCurrentMessage: (messageText: string) => void) {
@@ -55,7 +55,7 @@ export default function ChatMessage({ message, user, editMessage }: Props) {
     minHeight: '50px',
     textAlign: 'left'
   }}>
-    {message.character && message.character === user &&
+    {message.character && message.character === user && editMessage &&
       getEditButton(isEditing, setIsEditing, () => editMessage(currentMessage))
     }
     {message.audioId &&
