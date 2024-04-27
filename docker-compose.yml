@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  dndai:
+    container_name: dndai
+    image: node:20.11.1
+    volumes:
+      - ./:/app
+    working_dir: /app
+    ports:
+      - 9000:9000
+    command: [ "node", "./web-server/server.js" ]
