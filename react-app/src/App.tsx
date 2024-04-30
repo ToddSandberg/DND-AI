@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import ChatMessage from './components/ChatMessage';
 import { useCookies } from 'react-cookie'
@@ -30,6 +30,8 @@ function App() {
   const [ connected, setConnected ] = useState(false);
   const [ shouldRefreshChar, setShouldRefreshChar ] = useState(false);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const socket = new WebSocket("ws://" + window.location.host);
 
@@ -43,6 +45,10 @@ function App() {
       const data = JSON.parse(event.data);
       if (data.type && data.type === 'MESSAGE_UPDATE') {
         setMessages(data.messages);
+        // TODO only scroll when already at bottom/certain threshold
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
       } else if (data.type && data.type === 'DM_LOADING') {
         setIsDMLoading(data.isDMLoading);
       } else if (data.type && data.type === 'CHARACTER_UPDATE') {
@@ -187,7 +193,7 @@ function App() {
         }}>
           <TextField
             multiline
-            style={{backgroundColor: 'white', width: '400px', borderRadius: '10px', marginRight: '20px'}}
+            style={{backgroundColor: 'white', width: '400px', borderRadius: '10px', marginRight: '20px', marginBottom: '40px'}}
             value={currentMessage}
             disabled={!characterName}
             onChange={(e) => setCurrentMessage(e.target.value)}
@@ -216,8 +222,9 @@ function App() {
           >
             Trigger DM
           </Button>
-}
+        }
         </form>
+        <div ref={messagesEndRef}/>
       </header>
     </div>;
 }

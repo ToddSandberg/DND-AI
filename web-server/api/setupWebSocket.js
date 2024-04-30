@@ -19,11 +19,15 @@ var characters = [];
 var isDMLoading = false;
 var triggerDMVotes = [];
 var pendingTriggerDMVotes = [];
+var triggerRegenerateVotes = [];
+var pendingRegenerateVotes = [];
 
 const REFRESH_CHARACTERS = 'REFRESH_CHARACTERS';
 const TRIGGER_DM = 'TRIGGER_DM';
 const UPDATE_VOTES = 'UPDATE_VOTES';
 const EDIT_MESSAGE = 'EDIT_MESSAGE';
+const VOTE_REGENERATE = 'VOTE_REGENERATE';
+const UPDATE_REGENERATE_VOTES = 'UPDATE_REGENERATE_VOTES';
 const ERROR = 'ERROR';
 
 // Run against localhost, but you could replace with any OpenAI API endpoint
@@ -70,6 +74,17 @@ module.exports = function (server) {
                 pendingTriggerDMVotes = [];
                 setDMLoading(wss, true);
                 generateGPTResponse(wss);
+            }
+        } else if(data.type && data.type == VOTE_REGENERATE) {
+            triggerRegenerateVotes.push(data.name);
+            pendingRegenerateVotes.push(data.name);
+            sendRegenerateVoteUpdate(wss);
+            if (triggerRegenerateVotes.length >= characters.length) {
+                triggerRegenerateVotes = [];
+                pendingRegenerateVotes = [];
+                setDMLoading(wss, true);
+                // TODO generate response
+                //generateGPTResponse(wss);
             }
         } else if(data.type && data.type == 'SET_CHARACTER') {
             pushCharacter(wss, data.character)
@@ -256,6 +271,15 @@ function sendVoteUpdate(wss) {
     wss.clients.forEach(function each(client) {
         if (client !== wss && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
+        }
+    });
+}
+
+// TODO vote regenerate WIP
+function sendRegenerateVoteUpdate(wss) {
+    wss.clients.forEach(function each(client) {
+        if (client !== wss && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: UPDATE_REGENERATE_VOTES, votes: triggerRegenerateVotes }));
         }
     });
 }
