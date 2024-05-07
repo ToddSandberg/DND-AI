@@ -10,6 +10,11 @@ import { useErrorHook } from 'components/ErrorHook';
 import { ErrorPopUps } from 'components/ErrorPopUps';
 import { Message, User } from 'types/MessageTypes';
 
+function IsScrolledNearBottom() {
+  const threshold = document.body.clientHeight - window.innerHeight - 200;
+  return document.documentElement.scrollTop > threshold;
+}
+
 function App() {
   const [ messages, setMessages ] = useState<Message[]>([]);
   const [ currentMessage, setCurrentMessage ] = useState('');
@@ -29,6 +34,7 @@ function App() {
   const [ cookies, setCookie ] = useCookies(['user'])
   const [ connected, setConnected ] = useState(false);
   const [ shouldRefreshChar, setShouldRefreshChar ] = useState(false);
+  const [ shouldScroll, setShouldScroll ] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -44,11 +50,8 @@ function App() {
       console.log("Message from server ", event.data);
       const data = JSON.parse(event.data);
       if (data.type && data.type === 'MESSAGE_UPDATE') {
+        setShouldScroll(IsScrolledNearBottom());
         setMessages(data.messages);
-        // TODO only scroll when already at bottom/certain threshold
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
       } else if (data.type && data.type === 'DM_LOADING') {
         setIsDMLoading(data.isDMLoading);
       } else if (data.type && data.type === 'CHARACTER_UPDATE') {
@@ -106,6 +109,13 @@ function App() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (messagesEndRef.current && shouldScroll) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setShouldScroll(false);
+    }
+  }, [ messagesEndRef, messages, shouldScroll ]);
 
   useEffect(() => {
     if (shouldRefreshChar) {
