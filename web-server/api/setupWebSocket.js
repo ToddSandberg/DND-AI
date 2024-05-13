@@ -3,8 +3,12 @@ const WebSocket = require("ws");
 const axios = require('axios');
 const fs = require('fs');
 
+// === USER VARIABLES ===
 const characterName = "DND";
 const apiUrl = 'http://127.0.0.1:5000';
+const piperPath = '';
+const piperModel = '';
+// =======================
 
 const messages = [
     {
