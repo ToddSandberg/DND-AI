@@ -1,6 +1,8 @@
 
 /web-server/audioFiles/*.wav
 /web-server/node_modules
+/web-server/piperModels/*.onnx
+/web-server/piperModels/*.json
 /react-app/dist
 /react-app/.cache
 /react-app/.parcel-cache

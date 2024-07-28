@@ -2,6 +2,7 @@
 const WebSocket = require("ws");
 const axios = require('axios');
 const fs = require('fs');
+var exec = require('child_process').exec;
 
 // === USER VARIABLES ===
 const characterName = "DND";
@@ -145,9 +146,43 @@ function generateGPTResponse(wss) {
         console.log(response.data);
         const messageText = response.data.choices[0].message.content;
 
+        // TODO piper
+        if (piperPath && piperPath.length > 0) {
+            const audioId = Date.now().toString();
+            let piperCommand = `echo '${messageText}' | ${piperPath}`;
+            piperCommand += " --sentence_silence 0.2";
+            piperCommand += " --noise_scale 0.667";
+            piperCommand += " --length_scale 1.0";
+            piperCommand += " --noise_w 0.8";
+            piperCommand += " --model ./piperModels/"+piperModel;
+            piperCommand += ` --config ./piperModels/${piperModel}.json`;
+            piperCommand += ` --output_file audioFiles/DND_${audioId}.wav`;
+            console.log(`executing piper command ${piperCommand}`);
+
+            let dir = exec(piperCommand, function(err, stdout, stderr) {
+                if (err) {
+                    // should have err.code here?
+                    console.error('was an error:', err);
+                }
+                messages.push({
+                    "role": "assistant",
+                    "content": messageText,
+                    "audioId": audioId
+                });
+                setDMLoading(wss, false);
+                sendMessagesToClients(wss);
+                sendVoteUpdate(wss);
+            });
+
+            dir.on('exit', function (code) {
+                // exit code is code
+                console.log("Piper exited " + code);
+            });
+        }
+
         // TODO this method of doing it sucks
         // Check for a pending audioFile, files are required to be put in pending
-        var audioId;
+        /*var audioId;
         fs.readdir('./audioFiles/pending/', (err, files) => {
             if (err) {
                 console.error(err);
@@ -188,7 +223,7 @@ function generateGPTResponse(wss) {
                     sendVoteUpdate(wss);
                 })
             }
-        })
+        })*/
     })
     .catch((error) => console.log(error));
 }
