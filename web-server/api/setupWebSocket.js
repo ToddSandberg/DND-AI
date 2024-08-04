@@ -5,10 +5,10 @@ const fs = require('fs');
 var exec = require('child_process').exec;
 
 // === USER VARIABLES ===
-const characterName = "DND";
-const apiUrl = 'http://127.0.0.1:5000';
-const piperPath = '';
-const piperModel = '';
+let characterName;
+let apiUrl;
+let piperPath;
+let piperModel;
 // =======================
 
 const messages = [
@@ -35,30 +35,35 @@ const VOTE_REGENERATE = 'VOTE_REGENERATE';
 const UPDATE_REGENERATE_VOTES = 'UPDATE_REGENERATE_VOTES';
 const ERROR = 'ERROR';
 
-// Run against localhost, but you could replace with any OpenAI API endpoint
-const instance = axios.create({
-    baseURL: apiUrl,
-    responseType: 'json'
-});
+let instance;
 
 // TODO extract all the socket data.type fields to constants
 
 // accepts an http server (covered later)
 module.exports = function (server) {
-  // ws instance
-  const wss = new WebSocket.Server({ server: server });
+    // ws instance
+    const wss = new WebSocket.Server({ server: server });
+    const settings = JSON.parse(fs.readFileSync('./settings.json', 'utf8'));
+    characterName = settings.characterName;
+    apiUrl = settings.apiUrl;
+    piperPath = settings.piperPath;
+    piperModel = settings.piperModel;
+    instance = axios.create({
+        baseURL: apiUrl,
+        responseType: 'json'
+    });
 
-  // what to do after a connection is established
-  wss.on("connection", (ctx) => {
-    // print number of active connections
-    console.log("connected", wss.clients.size);
+    // what to do after a connection is established
+    wss.on("connection", (ctx) => {
+        // print number of active connections
+        console.log("connected", wss.clients.size);
 
-    // handle message events
-    // receive a message and echo it back
-    ctx.on("message", (dataString) => {
-        const data = JSON.parse(dataString);
-        console.log(data);
-        if (data.type && data.type == 'SEND_MESSAGE' && !isDMLoading) {
+        // handle message events
+        // receive a message and echo it back
+        ctx.on("message", (dataString) => {
+            const data = JSON.parse(dataString);
+            console.log(data);
+            if (data.type && data.type == 'SEND_MESSAGE' && !isDMLoading) {
                 console.log('Type is SEND_MESSAGE');
                 if (data.content.length > 0) {
                     // Add to existing messages
@@ -69,53 +74,53 @@ module.exports = function (server) {
                     });
                 }
                 sendMessagesToClients(wss);
-        } else if(data.type && data.type == TRIGGER_DM) {
-            // TODO check if votes already contains character
-            triggerDMVotes.push(data.name);
-            pendingTriggerDMVotes.push(data.name);
-            sendVoteUpdate(wss);
-            if (triggerDMVotes.length >= characters.length) {
-                triggerDMVotes = [];
-                pendingTriggerDMVotes = [];
-                setDMLoading(wss, true);
-                generateGPTResponse(wss);
+            } else if (data.type && data.type == TRIGGER_DM) {
+                // TODO check if votes already contains character
+                triggerDMVotes.push(data.name);
+                pendingTriggerDMVotes.push(data.name);
+                sendVoteUpdate(wss);
+                if (triggerDMVotes.length >= characters.length) {
+                    triggerDMVotes = [];
+                    pendingTriggerDMVotes = [];
+                    setDMLoading(wss, true);
+                    generateGPTResponse(wss);
+                }
+            } else if (data.type && data.type == VOTE_REGENERATE) {
+                triggerRegenerateVotes.push(data.name);
+                pendingRegenerateVotes.push(data.name);
+                sendRegenerateVoteUpdate(wss);
+                if (triggerRegenerateVotes.length >= characters.length) {
+                    triggerRegenerateVotes = [];
+                    pendingRegenerateVotes = [];
+                    setDMLoading(wss, true);
+                    // TODO generate response
+                    //generateGPTResponse(wss);
+                }
+            } else if (data.type && data.type == 'SET_CHARACTER') {
+                pushCharacter(wss, data.character)
+            } else if (data.type && data.type == EDIT_MESSAGE) {
+                if (messages[data.index].content === data.oldMessage) {
+                    messages[data.index].content = data.newMessage;
+                    sendMessagesToClients(wss);
+                } else {
+                    ctx.send(JSON.stringify({ type: ERROR, message: 'Message value changed before edit could be made.' }));
+                }
             }
-        } else if(data.type && data.type == VOTE_REGENERATE) {
-            triggerRegenerateVotes.push(data.name);
-            pendingRegenerateVotes.push(data.name);
-            sendRegenerateVoteUpdate(wss);
-            if (triggerRegenerateVotes.length >= characters.length) {
-                triggerRegenerateVotes = [];
-                pendingRegenerateVotes = [];
-                setDMLoading(wss, true);
-                // TODO generate response
-                //generateGPTResponse(wss);
-            }
-        } else if(data.type && data.type == 'SET_CHARACTER') {
-            pushCharacter(wss, data.character)
-        } else if(data.type && data.type == EDIT_MESSAGE) {
-            if (messages[data.index].content === data.oldMessage) {
-                messages[data.index].content = data.newMessage;
-                sendMessagesToClients(wss);
-            } else {
-                ctx.send(JSON.stringify({ type: ERROR, message: 'Message value changed before edit could be made.' }));
-            }
-        }
-    });
+        });
 
-    // handle close event
-    ctx.on("close", () => {
-        // TODO if there is a way to get information on the client that disconnected that would be better
-        console.log("Client disconnected, requesting refresh of characters on server side.");
-        requestCharacterRefresh(wss);
-    });
+        // handle close event
+        ctx.on("close", () => {
+            // TODO if there is a way to get information on the client that disconnected that would be better
+            console.log("Client disconnected, requesting refresh of characters on server side.");
+            requestCharacterRefresh(wss);
+        });
 
-    // Send all necessary info to client on connect
-    ctx.send(JSON.stringify({ type: 'MESSAGE_UPDATE', messages }));
-    ctx.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
-    ctx.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
-    ctx.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
-  });
+        // Send all necessary info to client on connect
+        ctx.send(JSON.stringify({ type: 'MESSAGE_UPDATE', messages }));
+        ctx.send(JSON.stringify({ type: 'DM_LOADING', isDMLoading }));
+        ctx.send(JSON.stringify({ type: 'CHARACTER_UPDATE', characters }));
+        ctx.send(JSON.stringify({ type: UPDATE_VOTES, votes: triggerDMVotes }));
+    });
 }
 
 function generateGPTResponse(wss) {
@@ -142,77 +147,28 @@ function generateGPTResponse(wss) {
             "context": context
         }
     })
-    .then((response) => {
-        console.log(response.data);
-        const messageText = response.data.choices[0].message.content;
+        .then((response) => {
+            console.log(response.data);
+            const messageText = response.data.choices[0].message.content;
 
-        // TODO piper
-        if (piperPath && piperPath.length > 0) {
-            const audioId = Date.now().toString();
-            let piperCommand = `echo '${messageText}' | ${piperPath}`;
-            piperCommand += " --sentence_silence 0.2";
-            piperCommand += " --noise_scale 0.667";
-            piperCommand += " --length_scale 1.0";
-            piperCommand += " --noise_w 0.8";
-            piperCommand += " --model ./piperModels/"+piperModel;
-            piperCommand += ` --config ./piperModels/${piperModel}.json`;
-            piperCommand += ` --output_file audioFiles/DND_${audioId}.wav`;
-            console.log(`executing piper command ${piperCommand}`);
+            // TODO piper
+            if (piperPath && piperPath.length > 0) {
+                const audioId = Date.now().toString();
+                let piperCommand = `echo '${messageText}' | ${piperPath}`;
+                piperCommand += " --sentence_silence 0.2";
+                piperCommand += " --noise_scale 0.667";
+                piperCommand += " --length_scale 1.0";
+                piperCommand += " --noise_w 0.8";
+                piperCommand += " --model ./piperModels/" + piperModel;
+                piperCommand += ` --config ./piperModels/${piperModel}.json`;
+                piperCommand += ` --output_file audioFiles/DND_${audioId}.wav`;
+                console.log(`executing piper command ${piperCommand}`);
 
-            let dir = exec(piperCommand, function(err, stdout, stderr) {
-                if (err) {
-                    // should have err.code here?
-                    console.error('was an error:', err);
-                }
-                messages.push({
-                    "role": "assistant",
-                    "content": messageText,
-                    "audioId": audioId
-                });
-                setDMLoading(wss, false);
-                sendMessagesToClients(wss);
-                sendVoteUpdate(wss);
-            });
-
-            dir.on('exit', function (code) {
-                // exit code is code
-                console.log("Piper exited " + code);
-            });
-        }
-
-        // TODO this method of doing it sucks
-        // Check for a pending audioFile, files are required to be put in pending
-        /*var audioId;
-        fs.readdir('./audioFiles/pending/', (err, files) => {
-            if (err) {
-                console.error(err);
-            }
-
-            if (files && files.length > 1) {
-                console.error('More than one pending file hmmmm');
-                messages.push({
-                    "role": "assistant",
-                    "content": messageText
-                });
-                setDMLoading(wss, false);
-                sendMessagesToClients(wss);
-                sendVoteUpdate(wss);
-            } else if (!files || files.length < 1) {
-                console.log('No audio file in pending, assuming thats intended');
-                messages.push({
-                    "role": "assistant",
-                    "content": messageText
-                });
-                setDMLoading(wss, false);
-                sendMessagesToClients(wss);
-                sendVoteUpdate(wss);
-            } else {
-                // TODO maybe its better to just save filename?
-                const file = files[0];
-                audioId = extractAudioIdFromFile(file);
-                fs.rename(`./audioFiles/pending/${file}`, `./audioFiles/${file}`, function (err) {
-                    if (err) console.error("Unable to move audio file!");
-                    console.log('Successfully renamed - AKA moved! ' + audioId)
+                let dir = exec(piperCommand, function (err, stdout, stderr) {
+                    if (err) {
+                        // should have err.code here?
+                        console.error('was an error:', err);
+                    }
                     messages.push({
                         "role": "assistant",
                         "content": messageText,
@@ -221,11 +177,60 @@ function generateGPTResponse(wss) {
                     setDMLoading(wss, false);
                     sendMessagesToClients(wss);
                     sendVoteUpdate(wss);
-                })
+                });
+
+                dir.on('exit', function (code) {
+                    // exit code is code
+                    console.log("Piper exited " + code);
+                });
             }
-        })*/
-    })
-    .catch((error) => console.log(error));
+
+            // TODO this method of doing it sucks
+            // Check for a pending audioFile, files are required to be put in pending
+            /*var audioId;
+            fs.readdir('./audioFiles/pending/', (err, files) => {
+                if (err) {
+                    console.error(err);
+                }
+
+                if (files && files.length > 1) {
+                    console.error('More than one pending file hmmmm');
+                    messages.push({
+                        "role": "assistant",
+                        "content": messageText
+                    });
+                    setDMLoading(wss, false);
+                    sendMessagesToClients(wss);
+                    sendVoteUpdate(wss);
+                } else if (!files || files.length < 1) {
+                    console.log('No audio file in pending, assuming thats intended');
+                    messages.push({
+                        "role": "assistant",
+                        "content": messageText
+                    });
+                    setDMLoading(wss, false);
+                    sendMessagesToClients(wss);
+                    sendVoteUpdate(wss);
+                } else {
+                    // TODO maybe its better to just save filename?
+                    const file = files[0];
+                    audioId = extractAudioIdFromFile(file);
+                    fs.rename(`./audioFiles/pending/${file}`, `./audioFiles/${file}`, function (err) {
+                        if (err) console.error("Unable to move audio file!");
+                        console.log('Successfully renamed - AKA moved! ' + audioId)
+                        messages.push({
+                            "role": "assistant",
+                            "content": messageText,
+                            "audioId": audioId
+                        });
+                        setDMLoading(wss, false);
+                        sendMessagesToClients(wss);
+                        sendVoteUpdate(wss);
+                    })
+                }
+            })*/
+        })
+        .catch((error) => console.log(error));
 }
 
 function pushCharacter(wss, character) {
@@ -326,7 +331,7 @@ function sendRegenerateVoteUpdate(wss) {
 function extractAudioIdFromFile(fileName) {
     const splitString = fileName.split('_');
     console.log(splitString);
-    const ending = splitString[splitString.length-1];
+    const ending = splitString[splitString.length - 1];
     console.log("ending: " + ending);
     return ending.split('.')[0];
 }

@@ -8,9 +8,10 @@ Uses web sockets to sync messages between clients.
 
 ## Run server
 1. Change the endpoint for the OpenAI API in `./web-server/api/setupWebSockets.js` if necessary, default is localhost.
-2. Change the `./web-server/context.txt` file to your liking to affect the story.
-2. Navigate to the react-app folder and run the commands `npm install` and `npm run build` to generate the build folder.
-3. Navigate to the web-server folder and run the commands `npm install` and `node server.js`. The server should be running now (default port is 9000).
+1. Change the `./web-server/context.txt` file to your liking to affect the story.
+1. Add a settings.json file to configure endpoints (example file is in settings-example.json)
+1. Navigate to the react-app folder and run the commands `npm install` and `npm run build` to generate the build folder.
+1. Navigate to the web-server folder and run the commands `npm install` and `node server.js`. The server should be running now (default port is 9000).
 
 ## How to Use the UI
 On load of the page you should get a modal asking for a character name and description. This will be provided as context to the LLM.

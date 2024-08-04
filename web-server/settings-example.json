@@ -1,0 +1,6 @@
+{
+    "characterName": "DND",
+    "apiUrl": "http://127.0.0.1:5000",
+    "piperPath": "C:\\piper\\piper.exe",
+    "piperModel": "en_GB-cori-high.onnx"
+}

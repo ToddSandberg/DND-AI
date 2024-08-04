@@ -3,6 +3,7 @@
 /web-server/node_modules
 /web-server/piperModels/*.onnx
 /web-server/piperModels/*.json
+/web-server/settings.json
 /react-app/dist
 /react-app/.cache
 /react-app/.parcel-cache
