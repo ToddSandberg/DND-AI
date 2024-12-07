@@ -1,0 +1,14 @@
+{
+  "name": "dnd-ai",
+  "version": "1.0.0",
+  "description": "Fun little application to have an AI be a DM for you and your friends. Create characters, send messages, then trigger your AI to respond.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4"
+  }
+}

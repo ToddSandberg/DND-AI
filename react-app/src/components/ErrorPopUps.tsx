@@ -1,6 +1,6 @@
 import React from 'react';
 import { ErrorAlert } from './ErrorAlert';
-import { UserError } from 'types/MessageTypes';
+import type { UserError } from 'types/MessageTypes';
 
 type Props = {
     errors: UserError[],
@@ -9,7 +9,7 @@ type Props = {
 
 export function ErrorPopUps({ errors, cancelError }: Props) {
     return <>{errors.filter((error) => !error.disabled).map((error, index) => <ErrorAlert
-        key={error.id + 'error'}
+        key={`${error.id}error`}
         error={error.message}
         index={index}
         isSuccess={error.isSuccess}

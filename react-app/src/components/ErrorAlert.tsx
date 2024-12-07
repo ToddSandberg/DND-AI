@@ -9,7 +9,7 @@ type Props = {
 };
 
 export function ErrorAlert({ error, index, cancelError, isSuccess }: Props) {
-    const marginTop = (index + 1) * 60 + 'px';
+    const marginTop = `${(index + 1) * 60}px`;
 
     return <Alert
         severity={isSuccess ? 'success' : 'error'}
