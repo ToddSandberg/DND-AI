@@ -8,6 +8,14 @@ const server = http.createServer(app);
 var setupWebSocket = require('./api/setupWebSocket')
 setupWebSocket(server);
 
+var RateLimit = require('express-rate-limit');
+const limiter = RateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // max 100 requests per windowMs
+});
+
+app.use(limiter);
+
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
