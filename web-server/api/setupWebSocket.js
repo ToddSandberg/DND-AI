@@ -36,6 +36,7 @@ const UPDATE_REGENERATE_VOTES = 'UPDATE_REGENERATE_VOTES';
 const ERROR = 'ERROR';
 
 let instance;
+let settings;
 
 // TODO extract all the socket data.type fields to constants
 
@@ -43,7 +44,7 @@ let instance;
 module.exports = function (server) {
     // ws instance
     const wss = new WebSocket.Server({ server: server });
-    const settings = JSON.parse(fs.readFileSync('./settings.json', 'utf8'));
+    settings = JSON.parse(fs.readFileSync('./settings.json', 'utf8'));
     characterName = settings.characterName;
     apiUrl = settings.apiUrl;
     piperPath = settings.piperPath;
@@ -132,20 +133,45 @@ function generateGPTResponse(wss) {
     context += characters.map((char) => char.name + ': ' + char.description.replace('.', ',')).join(', ') + "\n\n";
     context += 'Do not include dialogue from ' + characters.map((char) => char.name).join(', ') + ', {{user}}, or the players in your responses. Do not include dialogue from User.';
 
-    console.log(context);
+    console.log('Chat context', context);
+
+    const data = {};
+    const headers = { 'Content-Type': 'application/json' };
+
+    if (settings.type === 'gpt') {
+        data.messages = [
+            {
+                "role": "developer",
+                "content": [
+                    { "type": "text", "text": context }
+                ]
+            },
+            ...messages.map((message) => ({
+                    "role": message.role,
+                    "content": [
+                        { "type": "text", "text": message.content }
+                    ]
+                }))
+        ]
+        data.model = settings.model;
+        headers.Authorization = `Bearer ${settings.apiKey}`;
+    } else if (settings.type === 'oobabooga') {
+        data.messages = messages;
+        data.mode = 'chat';
+        data.character = characterName;
+        data.context = context;
+    } else {
+        console.error('Invalid type in settings.json');
+    }
+
+    console.log('calling with data', data);
+    console.log('calling with headers', headers);
     // Call your openai api
     instance({
         method: 'post',
         url: '/v1/chat/completions',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        data: {
-            "messages": messages,
-            "mode": "chat",
-            "character": characterName,
-            "context": context
-        }
+        headers,
+        data
     })
         .then((response) => {
             console.log(response.data);

@@ -22,6 +22,24 @@ You are able to change your current character by pressing the change character b
 
 Obviously the quality of the responses will vary significantly depending on the model you are using, and there's not guarantee you get something coherent.
 
+## Settings
+The following is the available configurable settings in the web server settings.json file
+
+```
+{
+    "apiUrl": "http://127.0.0.1:5000",
+    "piperPath": "C:\\piper\\piper.exe",
+    "piperModel": "en_GB-cori-high.onnx",
+    "type": "oobabooga", // Right now supports oobabooga, chatgpt
+    // only used for oobabooga
+    "characterName": "DND",
+    // only used for chatgpt apis
+    "apiKey": "xxxxxxxxxxxxx"
+    // only used for chatgpt apis
+    "model": "gpt-4o"
+}
+```
+
 ## Valid API Endpoints
 This web page was designed specifically to call the oobabooga webui `/v1/chat/completions` [api](https://github.com/oobabooga/text-generation-webui/wiki/12-%E2%80%90-OpenAI-API) on localhost, but it should theoretically work for any [openai api](https://platform.openai.com/docs/api-reference/chat/create). I have only tested with oobabooga though.
 
