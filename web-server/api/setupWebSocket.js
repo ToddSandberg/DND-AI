@@ -41,7 +41,7 @@ let settings;
 // TODO extract all the socket data.type fields to constants
 
 // accepts an http server (covered later)
-module.exports = function (server) {
+module.exports = (server) => {
     // ws instance
     const wss = new WebSocket.Server({ server: server });
     settings = JSON.parse(fs.readFileSync('./settings.json', 'utf8'));
@@ -64,7 +64,7 @@ module.exports = function (server) {
         ctx.on("message", (dataString) => {
             const data = JSON.parse(dataString);
             console.log(data);
-            if (data.type && data.type == 'SEND_MESSAGE' && !isDMLoading) {
+            if (data.type && data.type === 'SEND_MESSAGE' && !isDMLoading) {
                 console.log('Type is SEND_MESSAGE');
                 if (data.content.length > 0) {
                     // Add to existing messages
@@ -75,7 +75,7 @@ module.exports = function (server) {
                     });
                 }
                 sendMessagesToClients(wss);
-            } else if (data.type && data.type == TRIGGER_DM) {
+            } else if (data.type && data.type === TRIGGER_DM) {
                 // TODO check if votes already contains character
                 triggerDMVotes.push(data.name);
                 pendingTriggerDMVotes.push(data.name);
@@ -86,7 +86,7 @@ module.exports = function (server) {
                     setDMLoading(wss, true);
                     generateGPTResponse(wss);
                 }
-            } else if (data.type && data.type == VOTE_REGENERATE) {
+            } else if (data.type && data.type === VOTE_REGENERATE) {
                 triggerRegenerateVotes.push(data.name);
                 pendingRegenerateVotes.push(data.name);
                 sendRegenerateVoteUpdate(wss);
@@ -97,10 +97,10 @@ module.exports = function (server) {
                     // TODO generate response
                     //generateGPTResponse(wss);
                 }
-            } else if (data.type && data.type == 'SET_CHARACTER') {
+            } else if (data.type && data.type === 'SET_CHARACTER') {
                 pushCharacter(wss, data.character)
-            } else if (data.type && data.type == EDIT_MESSAGE) {
-                if (messages[data.index].content === data.oldMessage) {
+            } else if (data.type && data.type === EDIT_MESSAGE) {
+                if (typeof data.index === 'number' && messages[data.index].content === data.oldMessage) {
                     messages[data.index].content = data.newMessage;
                     sendMessagesToClients(wss);
                 } else {
@@ -125,13 +125,13 @@ module.exports = function (server) {
 }
 
 function generateGPTResponse(wss) {
-    var context = "";
+    let context = "";
     const baseContext = fs.readFileSync('./context.txt', 'utf8');
     context += baseContext;
     // Adds character descriptions to the context
     context += '\n {{user}} are the player characters. The player characters are ';
     context += characters.map((char) => char.name + ': ' + char.description.replace('.', ',')).join(', ') + "\n\n";
-    context += 'Do not include dialogue from ' + characters.map((char) => char.name).join(', ') + ', {{user}}, or the players in your responses. Do not include dialogue from User.';
+    context += `Do not include dialogue from ${characters.map((char) => char.name).join(', ')}, {{user}}, or the players in your responses. Do not include dialogue from User.`;
 
     console.log('Chat context', context);
 
@@ -185,12 +185,12 @@ function generateGPTResponse(wss) {
                 piperCommand += " --noise_scale 0.667";
                 piperCommand += " --length_scale 1.0";
                 piperCommand += " --noise_w 0.8";
-                piperCommand += " --model ./piperModels/" + piperModel;
+                piperCommand += ` --model ./piperModels/${piperModel}`;
                 piperCommand += ` --config ./piperModels/${piperModel}.json`;
                 piperCommand += ` --output_file audioFiles/DND_${audioId}.wav`;
                 console.log(`executing piper command ${piperCommand}`);
 
-                let dir = exec(piperCommand, function (err, stdout, stderr) {
+                const dir = exec(piperCommand, (err, stdout, stderr) => {
                     if (err) {
                         // should have err.code here?
                         console.error('was an error:', err);
@@ -205,9 +205,9 @@ function generateGPTResponse(wss) {
                     sendVoteUpdate(wss);
                 });
 
-                dir.on('exit', function (code) {
+                dir.on('exit', (code) => {
                     // exit code is code
-                    console.log("Piper exited " + code);
+                    console.log(`Piper exited ${code}`);
                 });
             }
 
@@ -358,6 +358,6 @@ function extractAudioIdFromFile(fileName) {
     const splitString = fileName.split('_');
     console.log(splitString);
     const ending = splitString[splitString.length - 1];
-    console.log("ending: " + ending);
+    console.log(`ending: ${ending}`);
     return ending.split('.')[0];
 }
