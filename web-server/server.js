@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '..' , 'react-app' , 'dist')));
 
 app.get('/', function (req, res) {
-  res.sendFile(path.join(__dirname, '..' , 'react-app' ,'build', 'index.html'));
+  res.sendFile(path.join(__dirname, '..' , 'react-app' ,'dist', 'index.html'));
 });
 
 var routes = require('./api/routes/apiRoutes');
