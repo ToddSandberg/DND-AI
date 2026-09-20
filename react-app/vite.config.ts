@@ -6,6 +6,10 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // The repo still contains stale compiled `.js` files next to the `.tsx`
+    // sources, so resolve TypeScript first to make sure the dev server serves
+    // the real sources rather than the old build output.
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
     alias: {
       components: path.resolve(__dirname, './src/components'),
       types: path.resolve(__dirname, './src/types'),
@@ -25,7 +29,11 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
         bypass: (req, res, options) => {
-          if (req.headers.upgrade === 'websocket' && req.url !== '/vite-hmr') {
+          // Vite appends a token to the HMR url (/vite-hmr?token=...), so compare
+          // the path only, otherwise the HMR socket gets proxied to the web server
+          // and the browser reconnects in a loop.
+          const pathname = req.url?.split('?')[0];
+          if (req.headers.upgrade === 'websocket' && pathname !== '/vite-hmr') {
             return undefined; // Proxy the websocket
           }
           return req.url; // Let Vite serve standard HTTP requests

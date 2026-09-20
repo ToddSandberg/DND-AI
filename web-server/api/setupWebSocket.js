@@ -3,6 +3,7 @@ const WebSocket = require("ws");
 const axios = require('axios');
 const fs = require('fs');
 var exec = require('child_process').exec;
+const { loadMessages, saveMessages } = require('./messageStore');
 
 // === USER VARIABLES ===
 let characterName;
@@ -11,14 +12,8 @@ let piperPath;
 let piperModel;
 // =======================
 
-const messages = [
-    {
-        'role': 'assistant',
-        'content': 'And so, the adventure continues...',
-        // TODO you need to manually change the first messages audio id
-        'audioId': '1710822196'
-    }
-];
+// Loaded from disk when the server starts, see setup below
+let messages = [];
 
 var characters = [];
 var isDMLoading = false;
@@ -43,7 +38,11 @@ let settings;
 // accepts an http server (covered later)
 module.exports = (server) => {
     // ws instance
-    const wss = new WebSocket.Server({ server: server });
+    // Only accept sockets aimed at the app itself. Without a path the server
+    // would also accept the Vite dev server's HMR socket, which leaves the
+    // browser reconnecting in a loop.
+    const wss = new WebSocket.Server({ server: server, path: '/' });
+    messages = loadMessages();
     settings = JSON.parse(fs.readFileSync('./settings.json', 'utf8'));
     characterName = settings.characterName;
     apiUrl = settings.apiUrl;
@@ -73,6 +72,7 @@ module.exports = (server) => {
                         "content": data.content,
                         "character": data.character
                     });
+                    saveMessages(messages);
                 }
                 sendMessagesToClients(wss);
             } else if (data.type && data.type === TRIGGER_DM) {
@@ -102,6 +102,7 @@ module.exports = (server) => {
             } else if (data.type && data.type === EDIT_MESSAGE) {
                 if (typeof data.index === 'number' && messages[data.index].content === data.oldMessage) {
                     messages[data.index].content = data.newMessage;
+                    saveMessages(messages);
                     sendMessagesToClients(wss);
                 } else {
                     ctx.send(JSON.stringify({ type: ERROR, message: 'Message value changed before edit could be made.' }));
@@ -200,6 +201,7 @@ function generateGPTResponse(wss) {
                         "content": messageText,
                         "audioId": audioId
                     });
+                    saveMessages(messages);
                     setDMLoading(wss, false);
                     sendMessagesToClients(wss);
                     sendVoteUpdate(wss);

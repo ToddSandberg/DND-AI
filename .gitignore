@@ -4,6 +4,7 @@
 /web-server/piperModels/*.onnx
 /web-server/piperModels/*.json
 /web-server/settings.json
+/web-server/messages.json
 /react-app/dist
 /react-app/.cache
 /react-app/.parcel-cache
